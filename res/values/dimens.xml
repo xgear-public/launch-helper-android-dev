@@ -1,0 +1,13 @@
+<resources>
+
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="default_app_image">48dp</dimen>
+
+    <dimen name="common_dimen_big">12dp</dimen>
+    <dimen name="common_dimen_mid">8dp</dimen>
+    <dimen name="common_dimen_small">4dp</dimen>
+    
+    
+    <dimen name="user_icon_mid">60dp</dimen>
+    <dimen name="user_icon_small">40dp</dimen>
+</resources>
