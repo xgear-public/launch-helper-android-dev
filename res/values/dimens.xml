@@ -2,6 +2,7 @@
 
     <!-- Default screen margins, per the Android Design guidelines. -->
     <dimen name="default_app_image">48dp</dimen>
+    <dimen name="default_label_size">13sp</dimen>
 
     <dimen name="common_dimen_big">12dp</dimen>
     <dimen name="common_dimen_mid">8dp</dimen>
