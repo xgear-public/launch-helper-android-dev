@@ -106,7 +106,6 @@ public class SettingsActivity extends Activity {
 		byte[] icon = mDb.get(bytes(IMG+appWidgetId));
 		Bitmap appIcon = null;
 		if(icon != null && icon.length > 0 ) {
-			appNameStr = new String(appName);
 			InputStream is = new ByteArrayInputStream(icon);
 			appIcon = BitmapFactory.decodeStream(is);
 		}
