@@ -1,10 +1,7 @@
 package by.xgear.launchhelepr;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import android.app.Activity;
@@ -19,9 +16,9 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -37,14 +34,13 @@ public class SettingsActivity extends Activity {
 	private ListView appList;
 	private int mAppWidgetId;
 	private File mPath;
-	private static final String DB_PATH = "data";
 	private DB mDb;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
-		mPath = new File(getCacheDir()/*getFilesDir()*/, DB_PATH);
+		setContentView(R.layout.activity_settings);
+		mPath = new File(getFilesDir(), Utils.DB_PATH);
 		mDb = new DB(mPath);
         mDb.open();
 		Intent intent = getIntent();
@@ -66,7 +62,7 @@ public class SettingsActivity extends Activity {
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				ResolveInfo rs = adapter.getItem(position);
 				ApplicationInfo info = rs.activityInfo.applicationInfo;
-				Drawable icon = getAppIcon(rs);
+				Drawable icon = getIcon(rs);
 				String appName = info.loadLabel(getPackageManager()).toString();
 				
 				RemoteViews remoteViews = new RemoteViews(getPackageName(),R.layout.widget_layout);
@@ -83,69 +79,44 @@ public class SettingsActivity extends Activity {
 				
 				AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(getApplicationContext());
 				appWidgetManager.updateAppWidget(mAppWidgetId, remoteViews);
+
+				saveWidgetData(new AppDataHolder(
+						((BitmapDrawable) icon).getBitmap(), appName, info.packageName, mAppWidgetId));
+				
 				Intent resultValue = new Intent();
 				resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
-				saveWidgetData(new AppDataHolder(
-						((BitmapDrawable) icon).getBitmap(), appName, mAppWidgetId));
-				loadWidgetData(mAppWidgetId);
 				setResult(RESULT_OK, resultValue);
 				finish();
 			}
 		});
 	}
 	
-	private static final String IMG = "img", NAME = "name";
-	
 	private void saveWidgetData(AppDataHolder dataHolder) {
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
 		dataHolder.getIcon().compress(Bitmap.CompressFormat.PNG, 100, stream);
-        mDb.put(bytes(IMG+dataHolder.getWidgetId()), stream.toByteArray());
-        mDb.put(bytes(NAME+dataHolder.getWidgetId()), bytes(dataHolder.getName()));
-	}
-	
-	private AppDataHolder loadWidgetData(int appWidgetId) {
-		byte[] appName = mDb.get(bytes(NAME+appWidgetId));
-		String appNameStr = null;
-		if(appName != null && appName.length > 0 )
-			appNameStr = new String(appName);
-		byte[] icon = mDb.get(bytes(IMG+appWidgetId));
-		Bitmap appIcon = null;
-		if(icon != null && icon.length > 0 ) {
-			InputStream is = new ByteArrayInputStream(icon);
-			appIcon = BitmapFactory.decodeStream(is);
-		}
-		if(appNameStr != null && appIcon != null) {
-			return new AppDataHolder(appIcon, appNameStr, appWidgetId);
-		} else
-			return null;
+        mDb.put(Utils.bytes(Utils.IMG+dataHolder.getWidgetId()), stream.toByteArray());
+        mDb.put(Utils.bytes(Utils.NAME+dataHolder.getWidgetId()), Utils.bytes(dataHolder.getName()));
+        mDb.put(Utils.bytes(Utils.PACKAGE_NAME+dataHolder.getWidgetId()), Utils.bytes(dataHolder.getPackageName()));
 	}
 	
 	@Override
 	protected void onDestroy() {        
 		mDb.close();
-		DB.destroy(mPath);
 		super.onDestroy();
 	}
 
-	public static byte[] bytes(String str) {
-        try {
-            return str.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+	private Drawable getIcon(ResolveInfo rs) {
+    	if(Build.VERSION.SDK_INT < 15) {
+			return getIconForOldVersions(rs);
+    	} else {
+    		Drawable d = getFullResIcon(rs);
+    		return d != null ? d : getIconForOldVersions(rs);
+    	}
     }
     
-    public static byte[] intToByteArray(int a) {
-        byte[] ret = new byte[4];
-        ret[3] = (byte) (a & 0xFF);   
-        ret[2] = (byte) ((a >> 8) & 0xFF);   
-        ret[1] = (byte) ((a >> 16) & 0xFF);   
-        ret[0] = (byte) ((a >> 24) & 0xFF);
-        return ret;
-    }
-    
-    public static int byteArrayToInt(byte[] b) {
-        return (b[3] & 0xFF) + ((b[2] & 0xFF) << 8) + ((b[1] & 0xFF) << 16) + ((b[0] & 0xFF) << 24);
+    private Drawable getIconForOldVersions(ResolveInfo rs) {
+		ApplicationInfo info = rs.activityInfo.applicationInfo;
+		return info.loadIcon(getPackageManager());
     }
     
     public Drawable getFullResDefaultActivityIcon() {
@@ -163,21 +134,6 @@ public class SettingsActivity extends Activity {
         }
 
         return (d != null) ? d : getFullResDefaultActivityIcon();
-    }
-
-    public Drawable getFullResIcon(String packageName, int iconId) {
-        Resources resources;
-        try {
-            resources = getPackageManager().getResourcesForApplication(packageName);
-        } catch (PackageManager.NameNotFoundException e) {
-            resources = null;
-        }
-        if (resources != null) {
-            if (iconId != 0) {
-                return getFullResIcon(resources, iconId);
-            }
-        }
-        return getFullResDefaultActivityIcon();
     }
 
     public Drawable getFullResIcon(ResolveInfo info) {
@@ -200,37 +156,19 @@ public class SettingsActivity extends Activity {
         return getFullResDefaultActivityIcon();
     }
 
-    private Drawable getAppIcon(ResolveInfo info) {
-        return getFullResIcon(info.activityInfo);
-    }
-	
-	static class AppDataHolder{
-		private Bitmap icon;
-		private String name;
-		private int widgetId;
-		public AppDataHolder(Bitmap icon, String name, int widgetId) {
-			super();
-			this.icon = icon;
-			this.name = name;
-			this.widgetId = widgetId;
-		}
-		public Bitmap getIcon() {
-			return icon;
-		}
-		public void setIcon(Bitmap icon) {
-			this.icon = icon;
-		}
-		public String getName() {
-			return name;
-		}
-		public void setName(String name) {
-			this.name = name;
-		}
-		public int getWidgetId() {
-			return widgetId;
-		}
-		public void setWidgetId(int widgetId) {
-			this.widgetId = widgetId;
-		}
-	}
+    /*
+        public Drawable getFullResIcon(String packageName, int iconId) {
+            Resources resources;
+            try {
+                resources = getPackageManager().getResourcesForApplication(packageName);
+            } catch (PackageManager.NameNotFoundException e) {
+                resources = null;
+            }
+            if (resources != null) {
+                if (iconId != 0) {
+                    return getFullResIcon(resources, iconId);
+                }
+            }
+            return getFullResDefaultActivityIcon();
+        }*/
 }

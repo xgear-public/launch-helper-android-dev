@@ -3,6 +3,6 @@
 
     <string name="app_name">Launch Helper</string>
     <string name="action_settings">Settings</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="app_info">This applications helps start target app from home screen if target app was deleted and installed</string>
 
 </resources>
