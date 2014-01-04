@@ -4,5 +4,7 @@
          Customize dimensions originally defined in res/values/dimens.xml (such as
          screen margins) for sw600dp devices (e.g. 7" tablets) here.
     -->
+    <dimen name="default_app_image">72dp</dimen>
+    <dimen name="app_name_margin">0dp</dimen>
 
 </resources>
